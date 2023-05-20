@@ -31,7 +31,7 @@ ALLOWED_HOSTS = []
 # Google API credentials
 GOOGLE_CREDENTIALS = os.path.join(BASE_DIR,  'backend' , 'credentials.json')
 GOOGLE_REDIRECT_URI = 'http://localhost:8000/callback'
-
+GOOGLE_CALENDAR_ID = '68864c91e6d5e65a13d4b0160ac1ae3b9a573166cc3152b8cbd3fded6707b541@group.calendar.google.com'
 # Google Calendar API scope
 GOOGLE_CALENDAR_SCOPES = ['https://www.googleapis.com/auth/calendar']
 

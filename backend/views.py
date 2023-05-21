@@ -1,15 +1,18 @@
 from django.conf import settings
 from google.oauth2 import service_account
 from google.auth.transport import requests
+from django.shortcuts import redirect
 from django.http import HttpResponse
 from googleapiclient.discovery import build
-
+from datetime import datetime, timedelta
+from django.views.decorators.csrf import csrf_exempt
+import json
 # Load the service account credentials from the JSON file
 credentials = service_account.Credentials.from_service_account_file(
     settings.GOOGLE_CREDENTIALS,
     scopes=settings.GOOGLE_CALENDAR_SCOPES
 )
-event_dict = {}
+@csrf_exempt
 def auth(request):
     # Refresh the access token
     request_obj = requests.Request()
@@ -21,41 +24,60 @@ def auth(request):
     # Store the access token in the session
     request.session['access_token'] = access_token
 
-    return HttpResponse('Sucess! your token is: ' + access_token)
+    return redirect('api')
 
+@csrf_exempt
 def api(request):
-    # Build the Google Calendar API client
-    service = build('calendar', 'v3', credentials=credentials)
-    event_data = request.POST
-    event_id = event_data.get('event_id')
-    # Create the event object
-    event = {
-        'summary': 'garble',
-        'start': {
-            'dateTime': '2023-05-20T1:00:00',
-            'timeZone': 'Asia/Kolkata',
-        },
-        'end': {
-            'dateTime': '2023-05-20T2:00:00',
-            'timeZone': 'Asia/Kolkata',
-        },
-    }
+    service = build("calendar", "v3", credentials=credentials)
+    event_data = json.loads(request.body)
 
-    # Insert the event into the calendar
-    calendar_id = settings.GOOGLE_CALENDAR_ID 
-    if event_id:
-        event_dict.pop(event_data.get('summary'))
-        created_event = service.events().update(calendarId=calendar_id, eventId=event_id, body=event).execute()
-        event_id = created_event['id']
-        event_dict[created_event['summary']] = event_id        
-        return HttpResponse('Event updated successfully!')
-    else:
-        # Create a new event
-        created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
-        event_id = created_event['id']
-        event_dict[created_event['summary']] = event_id
-        return HttpResponse('Event created successfully!')
+    # Get the list of events from the payload
+    event_dict = event_data.get("events", {})
+    print(len(event_dict))
+    calendar_id = settings.GOOGLE_CALENDAR_ID
 
+    for event in event_dict:
+        event_id = event.get("id")
+        event_summary = event.get("summary")
+        event_description = event.get("description")
+        start_time = datetime.fromisoformat(event.get("start", {}).get("day", datetime.datetime.now().isoformat()))
+        end_time = start_time.date() + timedelta(days=1)
+        event_label = event.get("label")
+
+        if event_id:
+            # Update an event
+            service.events().update(
+                calendarId=calendar_id,
+                eventId=event_id,
+                body={
+                    "summary": event_summary,
+                    "start": {
+                        "dateTime": start_time
+                    },
+                    "end": {
+                        "dateTime": end_time
+                    },
+                    "colorId": event_label
+                }
+            ).execute()
+        else:
+            # Create a new event
+            service.events().insert(
+                calendarId=calendar_id,
+                body={
+                    "summary": event_summary,
+                    "start": {
+                        "dateTime": start_time
+                    },
+                    "end": {
+                        "dateTime": end_time
+                    },
+                    "colorLabel": event_label
+                }
+            ).execute()
+
+    return HttpResponse('Event update/creation completed successfully!', headers={'Access-Control-Allow-Origin': 'http://localhost:3000'})
+@csrf_exempt
 def get_events(request):
     access_token = request.session.get('access_token')
 
@@ -76,15 +98,3 @@ def get_events(request):
         print(f"Start Time: {start_time}")
         print("-----------------------")
     return HttpResponse("okie")
-
-def delete_event(request):
-    # Build the Google Calendar API client
-    service = build('calendar', 'v3', credentials=credentials)
-    event_data = request.POST
-    event_id = event_data.get('event_id')
-    # Insert the event into the calendar
-    calendar_id = settings.GOOGLE_CALENDAR_ID  # Use 'primary' for the primary calendar
-    response = service.events().remove(calendarId=calendar_id, eventId = event_id).execute()
-    event_dict.pop(response['summary'])
-    # Return a response indicating the success
-    return HttpResponse("Sucessfull!")

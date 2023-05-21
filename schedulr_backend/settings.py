@@ -36,7 +36,7 @@ GOOGLE_CALENDAR_ID = '68864c91e6d5e65a13d4b0160ac1ae3b9a573166cc3152b8cbd3fded67
 GOOGLE_CALENDAR_SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 # Application definition
-
+CORS_ORIGIN_ALLOW_ALL = True
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -54,9 +55,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'schedulr_backend.urls'
+CSRF_ENABLED = True
 
 TEMPLATES = [
     {

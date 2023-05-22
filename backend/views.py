@@ -7,11 +7,13 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
 import json
+
 # Load the service account credentials from the JSON file
 credentials = service_account.Credentials.from_service_account_file(
     settings.GOOGLE_CREDENTIALS,
     scopes=settings.GOOGLE_CALENDAR_SCOPES
 )
+
 @csrf_exempt
 def auth(request):
     # Refresh the access token
@@ -28,55 +30,65 @@ def auth(request):
 
 @csrf_exempt
 def api(request):
-    service = build("calendar", "v3", credentials=credentials)
-    event_data = json.loads(request.body)
+    while request.method == 'POST':
+        service = build("calendar", "v3", credentials=credentials)
+        event_data = json.loads(request.body.decode('utf-8'))
+        print(event_data)
+        # Get the list of events from the payload
+        event_list = event_data if isinstance(event_data, list) else []
+        print(event_list)
+        calendar_id = settings.GOOGLE_CALENDAR_ID
 
-    # Get the list of events from the payload
-    event_dict = event_data.get("events", {})
-    print(len(event_dict))
-    calendar_id = settings.GOOGLE_CALENDAR_ID
+        for event in event_list:
+            event_id = event.get("id")
+            event_summary = event.get("title")
+            event_description = event.get("description")
+            start_time = datetime.fromtimestamp(event.get("day", 0) / 1000.0)
+            end_time = start_time + timedelta(days=1)
+            event_color_id = event.get("colorId")
+            print(event_summary)
+            print(event_description)
+            print(start_time)
+            print(end_time)
+            print(event_color_id)
+            if event_id:
+                # Update an event
+                service.events().update(
+                    calendarId=calendar_id,
+                    eventId=event_id,
+                    body={
+                        "summary": event_summary,
+                        "start": {
+                            "dateTime": start_time.isoformat()
+                        },
+                        "end": {
+                            "dateTime": end_time.isoformat()
+                        },
+                        "colorId": event_color_id
+                    }
+                ).execute()
+            else:
+                # Create a new event
+                service.events().insert(
+                    calendarId=calendar_id,
+                    body={
+                        "summary": event_summary,
+                        "start": {
+                            "dateTime": start_time.isoformat(),
+                            "timeZone": "Asia/Kolkata" 
+                        },
+                        "end": {
+                            "dateTime": end_time.isoformat(),
+                            "timeZone": "Asia/Kolkata" 
 
-    for event in event_dict:
-        event_id = event.get("id")
-        event_summary = event.get("summary")
-        event_description = event.get("description")
-        start_time = datetime.fromisoformat(event.get("start", {}).get("day", datetime.datetime.now().isoformat()))
-        end_time = start_time.date() + timedelta(days=1)
-        event_label = event.get("label")
+                        },
+                        "colorId": event_color_id
+                    }
+                ).execute()
 
-        if event_id:
-            # Update an event
-            service.events().update(
-                calendarId=calendar_id,
-                eventId=event_id,
-                body={
-                    "summary": event_summary,
-                    "start": {
-                        "dateTime": start_time
-                    },
-                    "end": {
-                        "dateTime": end_time
-                    },
-                    "colorId": event_label
-                }
-            ).execute()
-        else:
-            # Create a new event
-            service.events().insert(
-                calendarId=calendar_id,
-                body={
-                    "summary": event_summary,
-                    "start": {
-                        "dateTime": start_time
-                    },
-                    "end": {
-                        "dateTime": end_time
-                    },
-                    "colorLabel": event_label
-                }
-            ).execute()
+        return HttpResponse('Event update/creation completed successfully!', headers={'Access-Control-Allow-Origin': 'http://localhost:3000'})
 
-    return HttpResponse('Event update/creation completed successfully!', headers={'Access-Control-Allow-Origin': 'http://localhost:3000'})
+
 @csrf_exempt
 def get_events(request):
     access_token = request.session.get('access_token')

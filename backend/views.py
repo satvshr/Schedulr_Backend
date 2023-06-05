@@ -73,19 +73,9 @@ def deletion(request):
         calendar_id = settings.GOOGLE_CALENDAR_ID
 
         for event in event_list:
-            event_summary = event.get("title")
-            start_time = datetime.fromtimestamp(event.get("day", 0) / 1000.0)
-
-            events = service.events().list(calendarId=calendar_id, q=event_summary).execute()
-            print(events)
-            items = events.get('items', [])
-            print(items)
-            print("HEL")
-            for it in items:
-                # if it['start'].get('dateTime') == start_time.isoformat():
-                    event_id = it['id']
-                    service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
-                    print("HELLLOOOO")
+            event_delid = event.get("id")
+            print(event_delid)
+            service.events().delete(calendarId=calendar_id, eventId=event_delid).execute()
                 
         return HttpResponse("Deleted!")
 

@@ -26,7 +26,7 @@ def auth(request):
     # Store the access token in the session
     request.session['access_token'] = access_token
 
-    return redirect('get')
+    return redirect('get_events')
 
 @csrf_exempt
 def api(request):

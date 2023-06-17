@@ -44,23 +44,41 @@ def api(request):
             end_time = start_time + timedelta(days=1)
             event_color_id = event.get("colorId")
                 # Create a new event
-            service.events().insert(
-                calendarId=calendar_id,
-                body={
-                    "summary": event_summary,
-                    "description": event_description,
-                    "start": {
-                        "dateTime": start_time.isoformat(),
-                        "timeZone": "Asia/Kolkata"
-                    },
-                    "end": {
-                        "dateTime": end_time.isoformat(),
-                        "timeZone": "Asia/Kolkata"
-                    },
-                    "colorId": event_color_id
-                }
-            ).execute()
-
+            if event_id == None:
+                service.events().insert(
+                    calendarId=calendar_id,
+                    body={
+                        "summary": event_summary,
+                        "description": event_description,
+                        "start": {
+                            "dateTime": start_time.isoformat(),
+                            "timeZone": "Asia/Kolkata"
+                        },
+                        "end": {
+                            "dateTime": end_time.isoformat(),
+                            "timeZone": "Asia/Kolkata"
+                        },
+                        "colorId": event_color_id
+                    }
+                ).execute()
+            else:
+                service.events().update(
+                    calendarId=calendar_id,
+                    eventId = event_id,
+                    body={
+                        "summary": event_summary,
+                        "description": event_description,
+                        "start": {
+                            "dateTime": start_time.isoformat(),
+                            "timeZone": "Asia/Kolkata"
+                        },
+                        "end": {
+                            "dateTime": end_time.isoformat(),
+                            "timeZone": "Asia/Kolkata"
+                        },
+                        "colorId": event_color_id   
+                    }
+                ).execute()                
         return HttpResponse('Event update/creation/deletion completed successfully!', headers={'Access-Control-Allow-Origin': 'http://localhost:3000'})
 
 @csrf_exempt
@@ -68,13 +86,11 @@ def deletion(request):
     if request.method == 'POST':
         service = build("calendar", "v3", credentials=credentials)
         event_data = json.loads(request.body.decode('utf-8'))
-        print(event_data)
         event_list = event_data if isinstance(event_data, list) else []
         calendar_id = settings.GOOGLE_CALENDAR_ID
 
         for event in event_list:
             event_delid = event.get("id")
-            print(event_delid)
             service.events().delete(calendarId=calendar_id, eventId=event_delid).execute()
                 
         return HttpResponse("Deleted!")
